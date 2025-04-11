@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 對話機器人</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #2d2d2d;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #3498db;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .chat-messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        .user-message {
+            background: #3498db;
+            margin-left: auto;
+        }
+        .ai-message {
+            background: #2ecc71;
+            position: relative;
+        }
+        
+        .replay-btn {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            padding: 2px 8px;
+            font-size: 16px;
+            background: rgba(0,0,0,0.3);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .replay-btn:hover {
+            background: rgba(0,0,0,0.5);
+        }
+        .input-container {
+            padding: 15px 20px;
+            background: #333;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .input-container select {
+            padding: 10px;
+            border-radius: 5px;
+            background: #444;
+            color: #fff;
+            border: none;
+            min-width: 100px;
+        }
+        .input-container input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 25px;
+            border: none;
+            border-radius: 12px;
+            background: #4a4a4a;
+            color: #fff;
+            font-size: 20px;
+            border: 3px solid #3498db;
+            min-height: 70px;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            background: #5a5a5a;
+            outline: none;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.9);
+            border-color: #2980b9;
+        }
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            background: #3498db;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .typing-indicator {
+            display: none;
+            padding: 10px;
+            color: #888;
+        }
+        
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .chat-container {
+                max-width: 100%;
+                border-radius: 0;
+            }
+            .chat-messages {
+                height: 400px;
+                padding: 10px;
+            }
+            .message {
+                max-width: 90%;
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+            .input-container {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px;
+            }
+            .input-container select {
+                width: 100%;
+            }
+            input[type="text"] {
+                padding: 15px;
+                font-size: 16px;
+                min-height: 50px;
+            }
+            button {
+                width: 100%;
+                padding: 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .chat-messages {
+                height: 300px;
+            }
+            .message {
+                max-width: 95%;
+            }
+            input[type="text"] {
+                padding: 10px;
+                font-size: 14px;
+                min-height: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">角色扮演之AI對話</div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="typing-indicator" id="typingIndicator">AI 正在思考中...</div>
+        <div class="input-container">
+            <select id="characterSelect">
+                <option value="沫緋">沫緋</option>
+                <option value="凜月">凜月</option>
+                <option value="小夜">小夜</option>
+            </select>
+            <select id="voiceStyleSelect">
+                <option value="">預設語音</option>
+            </select>
+            <input type="text" id="userInput" placeholder="輸入您的訊息...">
+   
+            <button onclick="sendMessage()">發送</button>
+        </div>
+    </div>
+
+    <script>
+        let conversationId = 'default';  // 添加對話 ID
+
+        function addMessage(message, isUser) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            
+            if (!isUser) {
+                const replayBtn = document.createElement('button');
+                replayBtn.innerHTML = '🔊';
+                replayBtn.className = 'replay-btn';
+                replayBtn.onclick = function() { speakMessage(message); };
+                messageDiv.appendChild(document.createElement('br'));
+                messageDiv.appendChild(replayBtn);
+            }
+            
+            const messageText = document.createElement('span');
+            messageText.textContent = message;
+            messageDiv.appendChild(messageText);
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            input.value = '';
+
+            document.getElementById('typingIndicator').style.display = 'block';
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    message: message,
+                    conversation_id: conversationId,
+                    character: document.getElementById('characterSelect').value
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('typingIndicator').style.display = 'none';
+                addMessage(data.response, false);
+                speakMessage(data.response);
+            })
+            .catch(error => {
+                document.getElementById('typingIndicator').style.display = 'none';
+                addMessage('抱歉，出現了錯誤。', false);
+            });
+        }
+
+        function speakMessage(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                const voiceSelect = document.getElementById('voiceStyleSelect');
+                const voices = speechSynthesis.getVoices();
+                if (voices.length > 0 && voiceSelect.value) {
+                    const selectedVoice = voices.find(voice => voice.name === voiceSelect.value);
+                    if (selectedVoice) utterance.voice = selectedVoice;
+                }
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 初始化語音列表
+        function populateVoiceList() {
+            const voiceSelect = document.getElementById('voiceStyleSelect');
+            const voices = speechSynthesis.getVoices();
+            
+            voices.forEach(voice => {
+                if (voice.lang.includes('zh') || voice.lang.includes('en')) {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.value = voice.name;
+                    voiceSelect.appendChild(option);
+                }
+            });
+        }
+
+        speechSynthesis.onvoiceschanged = populateVoiceList;
+        window.addEventListener('load', function() {
+            populateVoiceList();
+        });
+
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
